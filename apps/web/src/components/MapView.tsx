@@ -1,6 +1,7 @@
+import { useEffect } from "react";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { MapContainer, Marker, Popup, Polyline, TileLayer } from "react-leaflet";
+import { MapContainer, Marker, Popup, Polyline, TileLayer, useMap } from "react-leaflet";
 import type { Coordinate, StopItem, WeatherHazard } from "@trip-intelligence/shared";
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -17,11 +18,35 @@ interface Props {
   onAdd: (stop: StopItem) => void;
 }
 
+const RouteViewport = ({ route }: { route: Coordinate[] }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    map.invalidateSize();
+
+    if (route.length > 1) {
+      const bounds = L.latLngBounds(route.map((p) => [p.lat, p.lon] as [number, number]));
+      map.fitBounds(bounds, { padding: [24, 24], animate: false });
+    }
+  }, [map, route]);
+
+  return null;
+};
+
 export const MapView = ({ route, stops, weather, onAdd }: Props) => {
   const center = route[0] ?? { lat: 39.5, lon: -98.35 };
 
   return (
-    <MapContainer className="map" center={[center.lat, center.lon]} zoom={5} scrollWheelZoom>
+    <MapContainer
+      className="map"
+      center={[center.lat, center.lon]}
+      zoom={5}
+      scrollWheelZoom
+      zoomAnimation={false}
+      markerZoomAnimation={false}
+      fadeAnimation={false}
+    >
+      <RouteViewport route={route} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
