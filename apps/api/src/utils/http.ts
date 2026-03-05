@@ -17,6 +17,35 @@ const normalizeHost = (url: string): string => {
   }
 };
 
+const parseRetryAfterMs = (header: string | null): number | null => {
+  if (!header) return null;
+  const seconds = Number(header);
+  if (!Number.isNaN(seconds)) return Math.max(0, seconds * 1000);
+
+  const when = Date.parse(header);
+  if (Number.isNaN(when)) return null;
+  return Math.max(0, when - Date.now());
+};
+
+const fetchWithRetry = async (url: string, init: RequestInit): Promise<Response> => {
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const response = await fetch(url, init);
+    if (response.ok) return response;
+
+    if (response.status === 429 && attempt < maxAttempts) {
+      const retryMs = parseRetryAfterMs(response.headers.get("retry-after")) ?? attempt * 1500;
+      await sleep(retryMs);
+      continue;
+    }
+
+    throw new Error(`Provider unavailable (${response.status})`);
+  }
+
+  throw new Error("Provider unavailable (429)");
+};
+
 export const getJson = async <T>(url: string, options: HttpJsonOptions = {}): Promise<T> => {
   const cacheKey = `http:${hashKey(url)}`;
   const cached = await cache.get<T>(cacheKey);
@@ -32,7 +61,7 @@ export const getJson = async <T>(url: string, options: HttpJsonOptions = {}): Pr
     await sleep(throttleMs - elapsed);
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     headers: {
       Accept: "application/json",
       ...options.headers
@@ -40,10 +69,6 @@ export const getJson = async <T>(url: string, options: HttpJsonOptions = {}): Pr
   });
 
   hostLastCall.set(host, Date.now());
-
-  if (!response.ok) {
-    throw new Error(`Provider unavailable (${response.status})`);
-  }
 
   const json = (await response.json()) as T;
   await cache.set(cacheKey, json, options.cacheTtlSeconds);
@@ -69,7 +94,7 @@ export const postText = async <T>(
     await sleep(throttleMs - elapsed);
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     method: "POST",
     headers: {
       "Content-Type": "text/plain",
@@ -79,10 +104,6 @@ export const postText = async <T>(
   });
 
   hostLastCall.set(host, Date.now());
-
-  if (!response.ok) {
-    throw new Error(`Provider unavailable (${response.status})`);
-  }
 
   const json = (await response.json()) as T;
   await cache.set(cacheKey, json, options.cacheTtlSeconds);

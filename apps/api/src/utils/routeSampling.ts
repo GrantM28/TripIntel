@@ -31,6 +31,20 @@ export const sampleRouteCorridor = (
   return sampled;
 };
 
+export const capSamplePoints = (points: Coordinate[], maxPoints = 20): Coordinate[] => {
+  if (points.length <= maxPoints) {
+    return points;
+  }
+
+  const stride = Math.ceil(points.length / maxPoints);
+  const capped = points.filter((_, index) => index % stride === 0);
+  const last = points[points.length - 1];
+  if (!capped.find((p) => p.lat === last.lat && p.lon === last.lon)) {
+    capped.push(last);
+  }
+  return capped;
+};
+
 export const boundingBoxFromRoute = (
   points: Coordinate[],
   paddingDegrees = 0.25

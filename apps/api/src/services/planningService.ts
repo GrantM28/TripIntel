@@ -1,5 +1,6 @@
 import {
   EMPTY_RESULTS,
+  type AlertItem,
   type PlanResponse,
   type StopCategory,
   type StopItem,
@@ -18,13 +19,9 @@ import { OpenMeteoProvider } from "../providers/weatherProvider.js";
 import { tripStreams } from "../sse/tripStream.js";
 import { dedupeStops, minDistanceToRouteKm } from "../utils/geo.js";
 import { rankStops } from "../utils/ranking.js";
-import { boundingBoxFromRoute, sampleRouteCorridor } from "../utils/routeSampling.js";
+import { boundingBoxFromRoute, capSamplePoints, sampleRouteCorridor } from "../utils/routeSampling.js";
 import { sanitizeLocationText } from "../utils/sanitize.js";
-import {
-  createTrip,
-  markTripComplete,
-  updateTripCategory
-} from "./tripService.js";
+import { createTrip, markTripComplete, updateTripCategory } from "./tripService.js";
 
 const geocoder = new NominatimProvider();
 const router = new OsrmProvider();
@@ -121,6 +118,13 @@ const fetchWeatherHazards = async (
   }));
 };
 
+const buildProviderAlert = (message: string): AlertItem => ({
+  id: `alert-${uuidv4()}`,
+  source: "provider",
+  message,
+  severity: "warning"
+});
+
 export const planTrip = async (params: {
   startText: string;
   destinationText: string;
@@ -140,7 +144,7 @@ export const planTrip = async (params: {
   ]);
 
   const route = await router.route(start, destination);
-  const sampledPoints = sampleRouteCorridor(route.geometry, 15);
+  const sampledPoints = capSamplePoints(sampleRouteCorridor(route.geometry, 35), 20);
   const routeData = {
     geometry: route.geometry,
     summary: {
@@ -179,6 +183,8 @@ const runPlanningPipeline = async (params: {
   sampledPoints: Array<{ lat: number; lon: number }>;
   routeDurationMinutes: number;
 }): Promise<void> => {
+  const providerAlerts: AlertItem[] = [];
+
   try {
     const maxDetourKm = params.options.maxDetourKm ?? env.DEFAULT_MAX_DETOUR_KM;
     const topN = params.options.stopsPerCategory ?? env.DEFAULT_STOPS_PER_CATEGORY;
@@ -186,36 +192,55 @@ const runPlanningPipeline = async (params: {
 
     const categories: StopCategory[] = ["scenic", "food", "gas", "hotels", "attractions"];
     for (const category of categories) {
-      const stops = await fetchRankedStops(
-        category,
-        params.routeGeometry,
-        bbox,
-        maxDetourKm,
-        topN
-      );
-      await emitCategory(params.tripId, category, stops);
+      try {
+        const stops = await fetchRankedStops(
+          category,
+          params.routeGeometry,
+          bbox,
+          maxDetourKm,
+          topN
+        );
+        await emitCategory(params.tripId, category, stops);
+      } catch (error) {
+        await emitCategory(params.tripId, category, []);
+        const reason = error instanceof Error ? error.message : "provider unavailable";
+        providerAlerts.push(buildProviderAlert(`${category} data unavailable: ${reason}`));
+      }
     }
 
     if (params.options.ev?.enabled) {
-      const evStops = await fetchEvStops(params.routeGeometry, bbox, maxDetourKm, topN);
-      await emitCategory(params.tripId, "ev", evStops);
+      try {
+        const evStops = await fetchEvStops(params.routeGeometry, bbox, maxDetourKm, topN);
+        await emitCategory(params.tripId, "ev", evStops);
+      } catch (error) {
+        await emitCategory(params.tripId, "ev", []);
+        const reason = error instanceof Error ? error.message : "provider unavailable";
+        providerAlerts.push(buildProviderAlert(`ev data unavailable: ${reason}`));
+      }
     } else {
       await emitCategory(params.tripId, "ev", []);
     }
 
-    const weather = await fetchWeatherHazards(params.sampledPoints, params.routeDurationMinutes);
-    await emitCategory(params.tripId, "weather", weather);
+    try {
+      const weather = await fetchWeatherHazards(params.sampledPoints, params.routeDurationMinutes);
+      await emitCategory(params.tripId, "weather", weather);
+    } catch (error) {
+      await emitCategory(params.tripId, "weather", []);
+      const reason = error instanceof Error ? error.message : "provider unavailable";
+      providerAlerts.push(buildProviderAlert(`weather data unavailable: ${reason}`));
+    }
 
     const alerts = await constructionProvider.fetchAlerts();
-    await emitCategory(
-      params.tripId,
-      "alerts",
-      alerts.map((alert) => ({
+    const mergedAlerts: AlertItem[] = [
+      ...alerts.map((alert) => ({
         ...alert,
         id: `alert-${uuidv4()}`,
         source: env.ENABLE_CONSTRUCTION_PROVIDER ? "configured-provider" : "placeholder"
-      }))
-    );
+      })),
+      ...providerAlerts
+    ];
+
+    await emitCategory(params.tripId, "alerts", mergedAlerts);
 
     await markTripComplete(params.tripId);
     tripStreams.emit(params.tripId, "update", {
