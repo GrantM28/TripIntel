@@ -100,9 +100,12 @@ export const Sidebar = ({
       {activeTab !== "weather" && activeTab !== "alerts" && (
         <div className="panel-list">
           {list.map((item) => (
-            <div key={item.id} className={itineraryIds.has(item.id) ? "added" : ""}>
-              <StopCard item={item} onAdd={onAdd} />
-            </div>
+            <StopCard
+              key={item.id}
+              item={item}
+              onAdd={onAdd}
+              isAdded={itineraryIds.has(item.id)}
+            />
           ))}
           {list.length === 0 && <p className="muted">Loading category results...</p>}
         </div>
