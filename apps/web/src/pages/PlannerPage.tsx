@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { TripOptions } from "@trip-intelligence/shared";
 import { OptionsDrawer } from "../components/OptionsDrawer";
@@ -18,7 +18,7 @@ export const PlannerPage = () => {
     ev: { enabled: false, connectorTypes: [] }
   });
 
-  const submit = async (event: React.FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!startText.trim() || !destinationText.trim()) {
       setError("Start and destination are required.");

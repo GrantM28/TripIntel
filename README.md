@@ -75,8 +75,8 @@ Trip Intelligence is a road-trip planner with a minimal first-load flow: enter o
 
 ## Quick Start (Docker Compose)
 
-1. Copy env file if needed:
-   - `.env` is already included from `.env.example` in this MVP scaffold.
+1. Create env file:
+   - `copy .env.example .env` (Windows)
 2. Start services:
    - `docker compose up --build`
 3. Open:

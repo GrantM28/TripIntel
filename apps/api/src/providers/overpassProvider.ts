@@ -59,7 +59,7 @@ export class OverpassProvider implements PlacesProvider {
       },
       source: "overpass",
       rating: element.tags?.stars ? Number(element.tags.stars) : undefined,
-      popularity: element.tags?."check_date" ? 70 : 50,
+      popularity: element.tags?.check_date ? 70 : 50,
       tags: element.tags
     }));
   }
