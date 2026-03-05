@@ -10,6 +10,7 @@ const envSchema = z.object({
   REDIS_URL: z.string().optional(),
   NOMINATIM_BASE_URL: z.string().default("https://nominatim.openstreetmap.org"),
   NOMINATIM_USER_AGENT: z.string().default("TripIntelligence/1.0 (contact: you@example.com)"),
+  PHOTON_BASE_URL: z.string().default("https://photon.komoot.io"),
   OSRM_BASE_URL: z.string().default("https://router.project-osrm.org"),
   OPEN_TRIP_MAP_API_KEY: z.string().optional(),
   OPEN_TRIP_MAP_BASE_URL: z.string().default("https://api.opentripmap.com/0.1/en/places"),
