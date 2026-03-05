@@ -1,7 +1,15 @@
 import type { Coordinate, StopCategory, StopItem } from "@trip-intelligence/shared";
 
+export interface GeocodeSuggestion {
+  label: string;
+  coordinate: Coordinate;
+  source: "nominatim" | "photon";
+  importance?: number;
+}
+
 export interface GeocodingProvider {
   geocode(text: string): Promise<Coordinate>;
+  suggest(text: string, limit?: number): Promise<GeocodeSuggestion[]>;
 }
 
 export interface RoutingProvider {

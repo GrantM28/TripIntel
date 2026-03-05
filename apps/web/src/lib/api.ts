@@ -7,12 +7,32 @@ const computedDefaultBase =
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? computedDefaultBase;
 
+export interface GeocodeSuggestionDto {
+  label: string;
+  coordinate: {
+    lat: number;
+    lon: number;
+  };
+  source: "nominatim" | "photon";
+  importance?: number;
+}
+
 const parseJson = async <T>(response: Response): Promise<T> => {
   if (!response.ok) {
     const data = (await response.json().catch(() => ({}))) as { message?: string };
     throw new Error(data.message || "Request failed");
   }
   return (await response.json()) as T;
+};
+
+export const fetchGeocodeSuggestions = async (q: string): Promise<GeocodeSuggestionDto[]> => {
+  if (q.trim().length < 2) {
+    return [];
+  }
+
+  const response = await fetch(`${API_BASE}/geocode/suggest?q=${encodeURIComponent(q)}`);
+  const data = await parseJson<{ suggestions: GeocodeSuggestionDto[] }>(response);
+  return data.suggestions;
 };
 
 export const planTrip = async (payload: PlanRequest): Promise<PlanResponse> => {

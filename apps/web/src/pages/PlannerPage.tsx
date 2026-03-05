@@ -1,8 +1,91 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { TripOptions } from "@trip-intelligence/shared";
 import { OptionsDrawer } from "../components/OptionsDrawer";
-import { planTrip } from "../lib/api";
+import { fetchGeocodeSuggestions, planTrip, type GeocodeSuggestionDto } from "../lib/api";
+
+interface AutoProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}
+
+const LocationInput = ({ label, value, onChange, placeholder }: AutoProps) => {
+  const [suggestions, setSuggestions] = useState<GeocodeSuggestionDto[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (value.trim().length < 2) {
+      setSuggestions([]);
+      setOpen(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setLoading(true);
+        const next = await fetchGeocodeSuggestions(value);
+        setSuggestions(next);
+        setOpen(next.length > 0);
+      } catch {
+        setSuggestions([]);
+        setOpen(false);
+      } finally {
+        setLoading(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [value]);
+
+  useEffect(() => {
+    const onDocClick = (event: MouseEvent) => {
+      if (!wrapperRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  return (
+    <label>
+      {label}
+      <div className="autocomplete" ref={wrapperRef}>
+        <input
+          placeholder={placeholder}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onFocus={() => setOpen(suggestions.length > 0)}
+          required
+        />
+        {loading && <div className="suggestions-loading">Searching...</div>}
+        {open && suggestions.length > 0 && (
+          <div className="suggestions-list" role="listbox">
+            {suggestions.map((item, index) => (
+              <button
+                type="button"
+                className="suggestion-item"
+                key={`${item.label}-${index}`}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  onChange(item.label);
+                  setOpen(false);
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </label>
+  );
+};
 
 export const PlannerPage = () => {
   const navigate = useNavigate();
@@ -44,24 +127,18 @@ export const PlannerPage = () => {
         <h1>Trip Intelligence</h1>
         <p>Plan smarter road trips with one click and stream useful stops as they load.</p>
         <form onSubmit={submit}>
-          <label>
-            Start
-            <input
-              placeholder="Chicago, IL"
-              value={startText}
-              onChange={(event) => setStartText(event.target.value)}
-              required
-            />
-          </label>
-          <label>
-            Destination
-            <input
-              placeholder="Nashville, TN"
-              value={destinationText}
-              onChange={(event) => setDestinationText(event.target.value)}
-              required
-            />
-          </label>
+          <LocationInput
+            label="Start"
+            placeholder="Chicago, IL"
+            value={startText}
+            onChange={setStartText}
+          />
+          <LocationInput
+            label="Destination"
+            placeholder="Nashville, TN"
+            value={destinationText}
+            onChange={setDestinationText}
+          />
           <div className="actions-row">
             <button type="button" className="secondary" onClick={() => setIsOptionsOpen((prev) => !prev)}>
               {isOptionsOpen ? "Hide Options" : "Options"}

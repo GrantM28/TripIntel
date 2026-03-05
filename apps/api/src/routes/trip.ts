@@ -1,8 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
+import { NominatimProvider } from "../providers/geocodingProvider.js";
 import { tripStreams } from "../sse/tripStream.js";
 import { planTrip } from "../services/planningService.js";
 import { getTripById, saveTrip } from "../services/tripService.js";
+
+const geocoder = new NominatimProvider();
 
 const planSchema = z.object({
   startText: z.string().min(2).max(160),
@@ -26,6 +29,16 @@ const planSchema = z.object({
 });
 
 export const tripRouter = Router();
+
+tripRouter.get("/geocode/suggest", async (req, res, next) => {
+  try {
+    const q = z.string().min(2).max(160).parse(req.query.q);
+    const suggestions = await geocoder.suggest(q, 5);
+    res.json({ suggestions });
+  } catch (error) {
+    next(error);
+  }
+});
 
 tripRouter.post("/plan", async (req, res, next) => {
   try {

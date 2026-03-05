@@ -79,6 +79,51 @@ input {
   background: white;
 }
 
+.autocomplete {
+  position: relative;
+}
+
+.suggestions-loading {
+  position: absolute;
+  right: 0.7rem;
+  top: 0.8rem;
+  font-size: 0.82rem;
+  color: #5f7497;
+}
+
+.suggestions-list {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  width: 100%;
+  background: #fff;
+  border: 1px solid #d2e2f8;
+  border-radius: 12px;
+  box-shadow: 0 18px 30px rgba(40, 74, 140, 0.16);
+  z-index: 20;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.suggestion-item {
+  width: 100%;
+  text-align: left;
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid #eef3fb;
+  background: #fff;
+  color: #143055;
+  padding: 0.65rem 0.75rem;
+}
+
+.suggestion-item:last-child {
+  border-bottom: 0;
+}
+
+.suggestion-item:hover {
+  background: #f2f7ff;
+  transform: none;
+}
+
 .actions-row {
   display: flex;
   gap: 0.7rem;
