@@ -56,6 +56,7 @@ export class OpenTripMapProvider implements PlacesProvider {
         lon: feature.geometry.coordinates[0],
         lat: feature.geometry.coordinates[1]
       },
+      distanceFromRouteKm: 0,
       source: "opentripmap",
       rating: feature.properties.rate,
       popularity: feature.properties.rate ? feature.properties.rate * 20 : 55

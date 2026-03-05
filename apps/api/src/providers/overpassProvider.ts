@@ -57,6 +57,7 @@ export class OverpassProvider implements PlacesProvider {
         lat: element.lat,
         lon: element.lon
       },
+      distanceFromRouteKm: 0,
       source: "overpass",
       rating: element.tags?.stars ? Number(element.tags.stars) : undefined,
       popularity: element.tags?.check_date ? 70 : 50,

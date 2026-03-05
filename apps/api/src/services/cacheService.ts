@@ -8,7 +8,7 @@ export interface CacheAdapter {
 }
 
 class InMemoryCache implements CacheAdapter {
-  private cache = new LRUCache<string, unknown>({ max: 2000 });
+  private cache = new LRUCache<string, any>({ max: 2000 });
 
   async get<T>(key: string): Promise<T | null> {
     const item = this.cache.get(key);

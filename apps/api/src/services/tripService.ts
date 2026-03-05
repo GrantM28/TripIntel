@@ -1,8 +1,12 @@
 import type { PlannedTrip, TripResults, TripOptions } from "@trip-intelligence/shared";
 import { EMPTY_RESULTS } from "@trip-intelligence/shared";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma.js";
 
 const parseJson = <T>(value: unknown): T => value as T;
+
+const toJsonValue = (value: unknown): Prisma.InputJsonValue =>
+  JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 
 export const createTrip = async (params: {
   startText: string;
@@ -14,16 +18,16 @@ export const createTrip = async (params: {
     data: {
       startText: params.startText,
       destinationText: params.destinationText,
-      optionsJson: params.options,
-      routeJson: params.route,
-      scenicJson: [],
-      foodJson: [],
-      gasJson: [],
-      hotelsJson: [],
-      attractionsJson: [],
-      evJson: [],
-      weatherJson: [],
-      alertsJson: [],
+      optionsJson: toJsonValue(params.options),
+      routeJson: toJsonValue(params.route),
+      scenicJson: toJsonValue([]),
+      foodJson: toJsonValue([]),
+      gasJson: toJsonValue([]),
+      hotelsJson: toJsonValue([]),
+      attractionsJson: toJsonValue([]),
+      evJson: toJsonValue([]),
+      weatherJson: toJsonValue([]),
+      alertsJson: toJsonValue([]),
       status: "processing"
     }
   });
@@ -56,7 +60,7 @@ export const updateTripCategory = async (
   await prisma.trip.update({
     where: { id: tripId },
     data: {
-      [fieldMap[category]]: payload
+      [fieldMap[category]]: toJsonValue(payload)
     }
   });
 };
