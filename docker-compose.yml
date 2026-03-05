@@ -35,9 +35,10 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:4000/api}
     environment:
       WEB_PORT: ${WEB_PORT:-5173}
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:4000/api}
     ports:
       - "${WEB_PORT:-5173}:5173"
     depends_on:

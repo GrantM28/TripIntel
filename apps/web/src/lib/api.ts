@@ -1,6 +1,11 @@
 import type { PlanRequest, PlanResponse, PlannedTrip, StreamEvent } from "@trip-intelligence/shared";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api";
+const computedDefaultBase =
+  typeof window !== "undefined"
+    ? `${window.location.protocol}//${window.location.hostname}:4000/api`
+    : "http://localhost:4000/api";
+
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? computedDefaultBase;
 
 const parseJson = async <T>(response: Response): Promise<T> => {
   if (!response.ok) {
